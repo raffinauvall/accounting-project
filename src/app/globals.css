@@ -24,4 +24,7 @@ button, input, select { font: inherit; }
 :root[data-theme="dark"] [class~="border-[#e5e9ed]"], :root[data-theme="dark"] [class~="border-[#eef1f3]"], :root[data-theme="dark"] [class~="border-[#dce2e7]"] { border-color: var(--line) !important; }
 :root[data-theme="dark"] [class~="text-[#18222c]"] { color: var(--ink) !important; }
 :root[data-theme="dark"] [class~="text-[#6b7785]"], :root[data-theme="dark"] [class~="text-[#687583]"], :root[data-theme="dark"] [class~="text-[#52606d]"], :root[data-theme="dark"] [class~="text-[#8a96a3]"], :root[data-theme="dark"] [class~="text-[#7e8b97]"] { color: var(--muted) !important; }
+:root[data-theme="dark"] [class~="text-[#111111]"], :root[data-theme="dark"] [class~="text-[#2b2b2b]"], :root[data-theme="dark"] [class~="text-[#9aa1a8]"] { color: var(--ink) !important; }
+:root[data-theme="dark"] [class~="bg-[#f2f2f2]"], :root[data-theme="dark"] [class~="bg-[#fafafa]"] { background-color: var(--paper) !important; }
+:root[data-theme="dark"] [class~="border-[#dfe2e5]"] { border-color: var(--line) !important; }
 :root[data-theme="dark"] input, :root[data-theme="dark"] select, :root[data-theme="dark"] textarea { background: var(--surface); border-color: var(--line); color: var(--ink); }
