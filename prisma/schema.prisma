@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  FINANCE
+  VIEWER
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum StatementType {
+  BALANCE_SHEET
+  PROFIT_LOSS
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum PeriodStatus {
+  OPEN
+  CLOSED
+}
+
+enum AuditAction {
+  CREATE_COA
+  UPDATE_COA
+  DELETE_COA
+  DEACTIVATE_COA
+  CREATE_ENTRY
+  UPDATE_ENTRY
+  CLOSE_PERIOD
+  IMPORT_JOURNAL
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique @db.VarChar(255)
+  name         String     @db.VarChar(150)
+  passwordHash String
+  role         Role       @default(VIEWER)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  entries      CoaEntry[] @relation("EntryCreatedBy")
+  journalTransactions JournalTransaction[] @relation("JournalCreatedBy")
+  auditLogs    AuditLog[] @relation("AuditActor")
+}
+
+model CoaAccount {
+  id               String        @id @default(cuid())
+  code             String        @unique @db.VarChar(50)
+  name             String        @db.VarChar(150)
+  parentId         String?
+  accountType      AccountType
+  statementType    StatementType
+  normalBalance    NormalBalance
+  isActive         Boolean       @default(true)
+  isPostingAccount Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  parent           CoaAccount?   @relation("CoaHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children         CoaAccount[]  @relation("CoaHierarchy")
+  entries          CoaEntry[]
+  journalTransactions JournalTransaction[]
+
+  @@index([parentId])
+}
+
+model AccountingPeriod {
+  id        String       @id @default(cuid())
+  month     Int          @db.SmallInt
+  year      Int          @db.SmallInt
+  startDate DateTime     @db.Date
+  endDate   DateTime     @db.Date
+  status    PeriodStatus @default(OPEN)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  entries   CoaEntry[]
+  journalTransactions JournalTransaction[]
+
+  @@unique([month, year])
+  @@index([year, month])
+}
+
+model CoaEntry {
+  id                 String           @id @default(cuid())
+  coaAccountId       String
+  accountingPeriodId String
+  amount             Decimal          @db.Decimal(19, 2)
+  description        String?          @db.VarChar(500)
+  createdById        String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  coaAccount         CoaAccount       @relation(fields: [coaAccountId], references: [id], onDelete: Restrict)
+  accountingPeriod   AccountingPeriod @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+  createdBy          User             @relation("EntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([coaAccountId, accountingPeriodId])
+  @@index([accountingPeriodId])
+  @@index([coaAccountId])
+}
+
+model JournalTransaction {
+  id                 String           @id @default(cuid())
+  transactionDate    DateTime         @db.Date
+  accountingPeriodId String
+  coaAccountId       String
+  offerNumber        String?          @db.VarChar(100)
+  invoiceNumber      String?          @db.VarChar(100)
+  description        String?          @db.VarChar(500)
+  credit             Decimal          @default(0) @db.Decimal(19, 2)
+  debit              Decimal          @default(0) @db.Decimal(19, 2)
+  importKey          String           @unique @db.VarChar(100)
+  sourceRow          Int
+  createdById        String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  accountingPeriod   AccountingPeriod @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+  coaAccount         CoaAccount       @relation(fields: [coaAccountId], references: [id], onDelete: Restrict)
+  createdBy          User             @relation("JournalCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([accountingPeriodId])
+  @@index([coaAccountId])
+  @@index([transactionDate])
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  userId    String
+  action    AuditAction
+  entity    String      @db.VarChar(80)
+  entityId  String      @db.VarChar(100)
+  metadata  Json?       @db.JsonB
+  createdAt DateTime    @default(now())
+  user      User        @relation("AuditActor", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
