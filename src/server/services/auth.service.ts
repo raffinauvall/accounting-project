@@ -7,8 +7,10 @@ const cookieName = "pt-apst-session";
 const sessionLifetime = 8 * 60 * 60;
 
 function secret() {
-  if (!process.env.AUTH_SECRET) throw new Error("AUTH_SECRET belum dikonfigurasi");
-  return process.env.AUTH_SECRET;
+  // ponytail: fallback ke DATABASE_URL agar demo deploy tetap login; AUTH_SECRET terpisah untuk production.
+  const value = process.env.AUTH_SECRET ?? process.env.DATABASE_URL;
+  if (!value) throw new Error("AUTH_SECRET belum dikonfigurasi");
+  return value;
 }
 
 function sign(value: string) {
