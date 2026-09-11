@@ -8,6 +8,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { logoutAction } from "@/app/login/actions";
 import { useState } from "react";
 
+const roleLabels: Record<string, string> = { ADMIN: "Admin", FINANCE: "Keuangan", VIEWER: "Penampil" };
+
 export function Header({ title, user }: { title: string; user: { name: string; email: string; role: string } }) {
   const [open, setOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
@@ -48,7 +50,7 @@ export function Header({ title, user }: { title: string; user: { name: string; e
           <div className="grid h-8 w-8 place-items-center rounded-full bg-[#ededed] text-xs font-bold text-[#2b2b2b]">AD</div>
           <div className="hidden text-right sm:block">
             <div className="text-sm font-semibold">{user.name}</div>
-            <div className="text-[11px] text-[#8a96a3]">{user.role} · Lokal</div>
+            <div className="text-[11px] text-[#8a96a3]">{roleLabels[user.role] ?? user.role} · Lokal</div>
           </div>
             <ChevronDown size={15} className={`text-[#8a96a3] transition-transform ${userOpen ? "rotate-180" : ""}`} />
           </button>
