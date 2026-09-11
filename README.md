@@ -15,9 +15,9 @@ Buka `http://localhost:3000/dashboard`. Mode demo menampilkan data contoh; input
 
 1. Salin `.env.example` menjadi `.env` dan sesuaikan `DATABASE_URL`.
 2. Jalankan `npm run db:migrate -- --name init`.
-3. Jalankan `SEED_ADMIN_PASSWORD="ganti-password-aman" npm run db:seed` untuk membuat user admin saja.
+3. Jalankan `SEED_ADMIN_PASSWORD="ganti-password-aman" npm run db:seed` untuk mengisi data demo.
 
-Seed tidak mengisi COA, periode, atau saldo contoh.
+Seed membuat user admin, COA, satu periode berjalan, dan saldo contoh.
 
 ## Pemeriksaan
 
