@@ -1,4 +1,4 @@
-# Ledgerly
+# PT. APST
 
 MVP laporan keuangan berbasis Chart of Accounts dengan Next.js App Router, Prisma, PostgreSQL, Zod, dan ExcelJS.
 

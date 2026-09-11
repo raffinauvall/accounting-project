@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-:root { --ink: #18222c; --muted: #6b7785; --line: #e5e9ed; --paper: #f7f9fb; --surface: #ffffff; --soft: #fbfcfd; --teal: #138b82; }
-:root[data-theme="dark"] { color-scheme: dark; --ink: #edf4f5; --muted: #a8b6be; --line: #30404a; --paper: #11181d; --surface: #192329; --soft: #202c33; --teal: #45b8ad; }
+:root { --ink: #18222c; --muted: #6b7785; --line: #e5e9ed; --paper: #f7f9fb; --surface: #ffffff; --soft: #fbfcfd; --teal: #111111; }
+:root[data-theme="dark"] { color-scheme: dark; --ink: #edf4f5; --muted: #a8b6be; --line: #30404a; --paper: #11181d; --surface: #192329; --soft: #202c33; --teal: #b5b5b5; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; transition: background-color .2s ease, color .2s ease; }
 a { color: inherit; text-decoration: none; }
@@ -17,7 +17,7 @@ button, input, select { font: inherit; }
 :root[data-theme="dark"] [class~="bg-[#f7f9fb]"] { background-color: #152027 !important; }
 :root[data-theme="dark"] [class~="bg-[#f4f7f8]"] { background-color: #243139 !important; }
 :root[data-theme="dark"] [class~="bg-[#edf0f2]"] { background-color: #2b3941 !important; }
-:root[data-theme="dark"] [class~="bg-[#e5f3f1]"] { background-color: #173a38 !important; }
+:root[data-theme="dark"] [class~="bg-[#f0f0f0]"] { background-color: #2a2a2a !important; }
 :root[data-theme="dark"] [class~="bg-[#e8eff8]"] { background-color: #1d344a !important; }
 :root[data-theme="dark"] [class~="bg-[#fff1df]"] { background-color: #49371e !important; }
 :root[data-theme="dark"] [class~="bg-[#fff0ef]"] { background-color: #4b2524 !important; }

@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import { Bell, ChevronDown, Menu, X } from "lucide-react";
 import { navItems } from "@/components/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { logoutAction } from "@/app/login/actions";
 import { useState } from "react";
 
-export function Header({ title }: { title: string }) {
+export function Header({ title, user }: { title: string; user: { name: string; email: string; role: string } }) {
   const [open, setOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const pathname = usePathname();
@@ -44,21 +45,21 @@ export function Header({ title }: { title: string }) {
             aria-expanded={userOpen}
             aria-controls="user-menu"
           >
-          <div className="grid h-8 w-8 place-items-center rounded-full bg-[#dcefeb] text-xs font-bold text-[#08776e]">AD</div>
+          <div className="grid h-8 w-8 place-items-center rounded-full bg-[#ededed] text-xs font-bold text-[#2b2b2b]">AD</div>
           <div className="hidden text-right sm:block">
-            <div className="text-sm font-semibold">Administrator</div>
-            <div className="text-[11px] text-[#8a96a3]">Admin · Lokal</div>
+            <div className="text-sm font-semibold">{user.name}</div>
+            <div className="text-[11px] text-[#8a96a3]">{user.role} · Lokal</div>
           </div>
             <ChevronDown size={15} className={`text-[#8a96a3] transition-transform ${userOpen ? "rotate-180" : ""}`} />
           </button>
           {userOpen && (
             <div id="user-menu" className="absolute right-0 top-full z-50 mt-2 w-56 rounded-md border border-[#e5e9ed] bg-white p-2 shadow-lg">
               <div className="border-b border-[#e5e9ed] px-3 py-2">
-                <div className="text-sm font-semibold">Administrator</div>
-                <div className="mt-0.5 text-xs text-[#8a96a3]">admin@example.com</div>
+                <div className="text-sm font-semibold">{user.name}</div>
+                <div className="mt-0.5 text-xs text-[#8a96a3]">{user.email}</div>
               </div>
               <Link href="/users" onClick={() => setUserOpen(false)} className="mt-1 block rounded-md px-3 py-2 text-sm text-[#687583] hover:bg-[#f4f7f8]">Kelola pengguna</Link>
-              <Link href="/login" onClick={() => setUserOpen(false)} className="block rounded-md px-3 py-2 text-sm text-[#687583] hover:bg-[#f4f7f8]">Ganti akun</Link>
+              <form action={logoutAction}><button className="block w-full rounded-md px-3 py-2 text-left text-sm text-[#687583] hover:bg-[#f4f7f8]">Keluar</button></form>
             </div>
           )}
         </div>
@@ -69,7 +70,7 @@ export function Header({ title }: { title: string }) {
           <div id="mobile-navigation" className="absolute left-0 right-0 top-full z-50 border-b border-[#e5e9ed] bg-white p-3 shadow-lg lg:hidden">
             <nav className="space-y-1">
               {navItems.map(([label, href, Icon]) => (
-                <Link key={href} href={href} onClick={() => setOpen(false)} className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium ${pathname === href ? "bg-[#e5f3f1] text-[#08776e]" : "text-[#687583]"}`}>
+                <Link key={href} href={href} onClick={() => setOpen(false)} className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium ${pathname === href ? "bg-[#f0f0f0] text-[#2b2b2b]" : "text-[#687583]"}`}>
                   <Icon size={17} />
                   {label}
                 </Link>
