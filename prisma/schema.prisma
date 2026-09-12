@@ -120,6 +120,8 @@ model JournalTransaction {
   transactionDate    DateTime         @db.Date
   accountingPeriodId String
   coaAccountId       String
+  inventoryItemId    String?
+  inventoryQuantity  Decimal          @default(0) @db.Decimal(19, 3)
   offerNumber        String?          @db.VarChar(100)
   invoiceNumber      String?          @db.VarChar(100)
   description        String?          @db.VarChar(500)
@@ -133,10 +135,23 @@ model JournalTransaction {
   accountingPeriod   AccountingPeriod @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
   coaAccount         CoaAccount       @relation(fields: [coaAccountId], references: [id], onDelete: Restrict)
   createdBy          User             @relation("JournalCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  inventoryItem      InventoryItem?   @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
 
   @@index([accountingPeriodId])
   @@index([coaAccountId])
   @@index([transactionDate])
+  @@index([inventoryItemId])
+}
+
+model InventoryItem {
+  id                 String              @id @default(cuid())
+  name               String              @unique @db.VarChar(150)
+  unit               String              @db.VarChar(30)
+  openingStock       Decimal             @default(0) @db.Decimal(19, 3)
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  journalTransactions JournalTransaction[]
 }
 
 model AuditLog {

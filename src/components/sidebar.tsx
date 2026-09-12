@@ -4,11 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import logo from "@/logo.jpg";
-import { BarChart3, BookOpen, CalendarDays, FileBarChart2, FileSpreadsheet, LayoutDashboard, ShieldCheck, Users } from "lucide-react";
+import { BarChart3, BookOpen, CalendarDays, FileBarChart2, FileSpreadsheet, LayoutDashboard, Package, ShieldCheck, Users } from "lucide-react";
 
 export const navItems = [
   ["Dasbor", "/dashboard", LayoutDashboard], ["Daftar Akun", "/coa", BookOpen], ["Input Saldo", "/entries", FileSpreadsheet],
   ["Jurnal Umum", "/journal", FileSpreadsheet],
+  ["Persediaan", "/inventory", Package],
   ["Neraca", "/reports/balance-sheet", FileBarChart2], ["Laba Rugi", "/reports/profit-loss", BarChart3], ["Periode", "/periods", CalendarDays],
   ["Pengguna", "/users", Users], ["Riwayat Aktivitas", "/audit-logs", ShieldCheck],
 ] as const;

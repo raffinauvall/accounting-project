@@ -55,13 +55,21 @@ function parseAmount(value: unknown): Prisma.Decimal {
   return new Prisma.Decimal(normalized);
 }
 
-function typeFromCategory(category: string): { accountType: AccountType; normalBalance: NormalBalance } {
+function accountPrefix(code: string) {
+  return code.trim().match(/^\d+/)?.[0] ?? "";
+}
+
+function typeFromCategory(category: string, code = ""): { accountType: AccountType; normalBalance: NormalBalance } {
   const value = category.toLowerCase();
   if (value.includes("pendapatan")) return { accountType: AccountType.REVENUE, normalBalance: NormalBalance.CREDIT };
   if (value.includes("ekuitas")) return { accountType: AccountType.EQUITY, normalBalance: NormalBalance.CREDIT };
   if (value.includes("hutang") || value.includes("kewajiban")) return { accountType: AccountType.LIABILITY, normalBalance: NormalBalance.CREDIT };
   if (value.includes("beban") || value.includes("harga_pokok")) return { accountType: AccountType.EXPENSE, normalBalance: NormalBalance.DEBIT };
   if (value.includes("depresiasi") || value.includes("amortisasi")) return { accountType: AccountType.ASSET, normalBalance: NormalBalance.CREDIT };
+  if (accountPrefix(code) === "2") return { accountType: AccountType.LIABILITY, normalBalance: NormalBalance.CREDIT };
+  if (accountPrefix(code) === "3") return { accountType: AccountType.EQUITY, normalBalance: NormalBalance.CREDIT };
+  if (accountPrefix(code) === "4") return { accountType: AccountType.REVENUE, normalBalance: NormalBalance.CREDIT };
+  if (accountPrefix(code) === "5" || accountPrefix(code) === "6") return { accountType: AccountType.EXPENSE, normalBalance: NormalBalance.DEBIT };
   return { accountType: AccountType.ASSET, normalBalance: NormalBalance.DEBIT };
 }
 
@@ -84,7 +92,6 @@ export async function importJournalWorkbook(buffer: Buffer, userId: string, file
   const setupAccounts = setup ? readSetup(setup) : new Map<string, SetupAccount>();
   const rows: ParsedJournal[] = [];
   const errors: string[] = [];
-  let unmappedRows = 0;
 
   for (let row = 6; row <= sheet.rowCount; row += 1) {
     const date = parseDate(sheet.getCell(row, 4).value);
@@ -93,7 +100,9 @@ export async function importJournalWorkbook(buffer: Buffer, userId: string, file
     let debit = parseAmount(sheet.getCell(row, 16).value);
     if (!date && !code && credit.isZero() && debit.isZero()) continue;
     if (!date) errors.push(`Baris ${row}: tanggal tidak valid`);
-    if (!code && date && (!credit.isZero() || !debit.isZero())) unmappedRows += 1;
+    if (!code && (date || !credit.isZero() || !debit.isZero())) {
+      errors.push(`Baris ${row}: Nomor Akun wajib diisi`);
+    }
     if (credit.isZero() && debit.isZero()) errors.push(`Baris ${row}: nominal kredit/debet kosong`);
     if (!date || !code || (credit.isZero() && debit.isZero())) continue;
     if (credit.isNegative()) { debit = debit.plus(credit.abs()); credit = new Prisma.Decimal(0); }
@@ -131,7 +140,7 @@ export async function importJournalWorkbook(buffer: Buffer, userId: string, file
       if (period.status !== "OPEN") throw new Error(`Periode ${key} sudah tertutup`);
       if (!accountsByCode.has(row.code)) {
         const setupAccount = setupAccounts.get(row.code);
-        const classification = typeFromCategory(setupAccount?.category ?? "");
+        const classification = typeFromCategory(setupAccount?.category ?? "", row.code);
         const account = await tx.coaAccount.create({ data: { code: row.code, name: setupAccount?.name || row.name, accountType: classification.accountType, statementType: classification.accountType === AccountType.REVENUE || classification.accountType === AccountType.EXPENSE ? StatementType.PROFIT_LOSS : StatementType.BALANCE_SHEET, normalBalance: classification.normalBalance, isPostingAccount: true }, select: { id: true, code: true, isActive: true, isPostingAccount: true } });
         accountsByCode.set(row.code, account);
         createdAccounts += 1;
@@ -144,13 +153,29 @@ export async function importJournalWorkbook(buffer: Buffer, userId: string, file
       return { transactionDate: row.date, accountingPeriodId: period.id, coaAccountId: account.id, offerNumber: row.offerNumber, invoiceNumber: row.invoiceNumber, description: row.description, credit: row.credit, debit: row.debit, importKey: `${fileHash}-${row.row}`, sourceRow: row.row, createdById: userId };
     });
     const inserted = await tx.journalTransaction.createMany({ data, skipDuplicates: true });
-    return { inserted: inserted.count, skipped: data.length - inserted.count, rows: data.length, unmappedRows, createdAccounts, createdPeriods };
+    return { inserted: inserted.count, skipped: data.length - inserted.count, rows: data.length, createdAccounts, createdPeriods };
   });
 
   await createAuditLog({ userId, action: "IMPORT_JOURNAL", entity: "JournalTransaction", entityId: fileHash, metadata: { fileName, ...result } });
   return result;
 }
 
+export function clearJournalData() {
+  return prisma.journalTransaction.deleteMany();
+}
+
 export function listJournalTransactions() {
-  return prisma.journalTransaction.findMany({ orderBy: [{ transactionDate: "desc" }, { sourceRow: "desc" }], take: 100, include: { coaAccount: { select: { code: true, name: true } }, accountingPeriod: { select: { month: true, year: true } } } });
+  return prisma.journalTransaction.findMany({ orderBy: [{ transactionDate: "desc" }, { sourceRow: "desc" }], take: 100, include: { coaAccount: { select: { code: true, name: true } }, accountingPeriod: { select: { month: true, year: true } }, inventoryItem: { select: { id: true, name: true, unit: true } } } });
+}
+
+export async function mapJournalTransaction(id: string, inventoryItemId: string | null, quantity: string) {
+  if (!id) throw new Error("Transaksi jurnal tidak valid");
+  if (inventoryItemId) {
+    const item = await prisma.inventoryItem.findFirst({ where: { id: inventoryItemId, isActive: true }, select: { id: true } });
+    if (!item) throw new Error("Barang tidak ditemukan");
+    const amount = new Prisma.Decimal(quantity.trim().replace(",", ".") || "0");
+    if (amount.isNegative() || amount.isZero()) throw new Error("Kuantitas harus lebih besar dari nol");
+    return prisma.journalTransaction.update({ where: { id }, data: { inventoryItemId: item.id, inventoryQuantity: amount } });
+  }
+  return prisma.journalTransaction.update({ where: { id }, data: { inventoryItemId: null, inventoryQuantity: 0 } });
 }

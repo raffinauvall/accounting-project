@@ -6,6 +6,7 @@ import { Bell, ChevronDown, Menu, X } from "lucide-react";
 import { navItems } from "@/components/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { logoutAction } from "@/app/login/actions";
+import { ConfirmForm } from "@/components/confirm-dialog";
 import { useState } from "react";
 
 const roleLabels: Record<string, string> = { ADMIN: "Admin", FINANCE: "Keuangan", VIEWER: "Penampil" };
@@ -61,7 +62,7 @@ export function Header({ title, user }: { title: string; user: { name: string; e
                 <div className="mt-0.5 text-xs text-[#8a96a3]">{user.email}</div>
               </div>
               <Link href="/users" onClick={() => setUserOpen(false)} className="mt-1 block rounded-md px-3 py-2 text-sm text-[#687583] hover:bg-[#f4f7f8]">Kelola pengguna</Link>
-              <form action={logoutAction}><button className="block w-full rounded-md px-3 py-2 text-left text-sm text-[#687583] hover:bg-[#f4f7f8]">Keluar</button></form>
+              <ConfirmForm action={logoutAction} message="Anda akan keluar dari ruang kerja keuangan." title="Konfirmasi keluar" confirmLabel="Keluar" className="mt-1"><button className="block w-full rounded-md px-3 py-2 text-left text-sm text-[#687583] hover:bg-[#f4f7f8]">Keluar</button></ConfirmForm>
             </div>
           )}
         </div>
