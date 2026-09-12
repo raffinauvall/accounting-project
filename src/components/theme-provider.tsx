@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark";
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({ theme: "light", toggle: () => undefined });
@@ -10,6 +10,7 @@ const subscribe = (onChange: () => void) => { window.addEventListener("storage",
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useSyncExternalStore<Theme>(subscribe, getTheme, getServerTheme);
+  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   const toggle = () => { const next = theme === "light" ? "dark" : "light"; window.localStorage.setItem("ledgerly-theme", next); document.documentElement.dataset.theme = next; window.dispatchEvent(new Event("ledgerly-theme-change")); };
   return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
 }

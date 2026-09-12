@@ -1,33 +1,23 @@
 @import "tailwindcss";
 
-:root { --ink: #18222c; --muted: #6b7785; --line: #e5e9ed; --paper: #f7f9fb; --surface: #ffffff; --soft: #fbfcfd; --teal: #111111; }
-:root[data-theme="dark"] { color-scheme: dark; --ink: #edf4f5; --muted: #a8b6be; --line: #30404a; --paper: #11181d; --surface: #192329; --soft: #202c33; --teal: #b5b5b5; }
+:root { --background: #f8fafc; --foreground: #0f172a; --card: #ffffff; --card-foreground: #0f172a; --muted: #f1f5f9; --muted-foreground: #64748b; --border: #e2e8f0; --primary: #18181b; --primary-hover: #27272a; --primary-foreground: #fafafa; --secondary: #f1f5f9; --destructive: #b42318; --destructive-soft: #fff1f0; --warning: #a15c07; --warning-soft: #fff8ed; --chart-primary: #020617; --chart-secondary: #64748b; --chart-grid: #cbd5e1; --ring: #0f172a; --hero: #111827; --ink: var(--foreground); --line: var(--border); --paper: var(--background); --surface: var(--card); --soft: #f8fafc; --teal: var(--primary); }
+:root[data-theme="dark"] { color-scheme: dark; --background: #09090b; --foreground: #fafafa; --card: #111113; --card-foreground: #fafafa; --muted: #1f1f22; --muted-foreground: #a1a1aa; --border: #27272a; --primary: #18181b; --primary-hover: #27272a; --primary-foreground: #fafafa; --secondary: #1f1f22; --destructive: #f87171; --destructive-soft: #3f1d20; --warning: #fbbf24; --warning-soft: #3b2a12; --chart-primary: #fafafa; --chart-secondary: #a1a1aa; --chart-grid: #3f3f46; --ring: #a1a1aa; --hero: #18181b; --ink: var(--foreground); --line: var(--border); --paper: var(--background); --surface: var(--card); --soft: #111113; --teal: var(--primary); }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; transition: background-color .2s ease, color .2s ease; }
+body { margin: 0; background: var(--background); color: var(--foreground); font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; transition: background-color .2s ease, color .2s ease; }
 a { color: inherit; text-decoration: none; }
-button, input, select { font: inherit; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
-.label { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+button, input, select, textarea { font: inherit; }
+button, a, select, summary { transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, opacity .15s ease; }
+button:not(:disabled), a, select, summary { cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.panel { min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: .75rem; box-shadow: 0 1px 2px rgb(15 23 42 / .04); }
+.label { display: block; color: var(--muted-foreground); font-size: 12px; font-weight: 700; letter-spacing: .04em; line-height: 1.25; text-transform: uppercase; }
+.label > input:not([type="hidden"]), .label > select, .label > textarea { display: block; margin-top: .5rem; }
 .money { font-variant-numeric: tabular-nums; }
-.chart-bar { transition: transform .18s ease, filter .18s ease; transform-origin: bottom; }
+.chart-bar { min-width: 3px; transition: transform .18s ease, filter .18s ease; transform-origin: bottom; }
 .chart-bar:hover { filter: brightness(1.1); transform: scaleY(1.05); }
-.table-row-hover:hover { background-color: #fbfcfd; }
+.table-row-hover:hover { background-color: var(--muted); }
+input, select, textarea { border-color: var(--border); color: var(--foreground); }
+input::placeholder, textarea::placeholder { color: var(--muted-foreground); opacity: .8; }
+:root[data-theme="dark"] input, :root[data-theme="dark"] select, :root[data-theme="dark"] textarea { background: var(--card); border-color: var(--border); color: var(--foreground); }
+:root[data-theme="dark"] option { background: var(--card); color: var(--foreground); }
 @media print { aside, header, .no-print { display: none !important; } main { padding: 0 !important; } .panel { border-color: #ddd; } }
-:root[data-theme="dark"] .bg-white { background-color: var(--surface) !important; }
-:root[data-theme="dark"] [class~="bg-[#fbfcfd]"] { background-color: var(--soft) !important; }
-:root[data-theme="dark"] [class~="bg-[#f7f9fb]"] { background-color: #152027 !important; }
-:root[data-theme="dark"] [class~="bg-[#f4f7f8]"] { background-color: #243139 !important; }
-:root[data-theme="dark"] [class~="bg-[#edf0f2]"] { background-color: #2b3941 !important; }
-:root[data-theme="dark"] [class~="bg-[#f0f0f0]"] { background-color: #2a2a2a !important; }
-:root[data-theme="dark"] [class~="bg-[#e8eff8]"] { background-color: #1d344a !important; }
-:root[data-theme="dark"] [class~="bg-[#fff1df]"] { background-color: #49371e !important; }
-:root[data-theme="dark"] [class~="bg-[#fff0ef]"] { background-color: #4b2524 !important; }
-:root[data-theme="dark"] .table-row-hover:hover { background-color: #1d2a31; }
-:root[data-theme="dark"] [class~="divide-[#eef1f3]"] > :not([hidden]) ~ :not([hidden]) { border-color: var(--line) !important; }
-:root[data-theme="dark"] [class~="border-[#e5e9ed]"], :root[data-theme="dark"] [class~="border-[#eef1f3]"], :root[data-theme="dark"] [class~="border-[#dce2e7]"] { border-color: var(--line) !important; }
-:root[data-theme="dark"] [class~="text-[#18222c]"] { color: var(--ink) !important; }
-:root[data-theme="dark"] [class~="text-[#6b7785]"], :root[data-theme="dark"] [class~="text-[#687583]"], :root[data-theme="dark"] [class~="text-[#52606d]"], :root[data-theme="dark"] [class~="text-[#8a96a3]"], :root[data-theme="dark"] [class~="text-[#7e8b97]"] { color: var(--muted) !important; }
-:root[data-theme="dark"] [class~="text-[#111111]"], :root[data-theme="dark"] [class~="text-[#2b2b2b]"], :root[data-theme="dark"] [class~="text-[#9aa1a8]"] { color: var(--ink) !important; }
-:root[data-theme="dark"] [class~="bg-[#f2f2f2]"], :root[data-theme="dark"] [class~="bg-[#fafafa]"] { background-color: var(--paper) !important; }
-:root[data-theme="dark"] [class~="border-[#dfe2e5]"] { border-color: var(--line) !important; }
-:root[data-theme="dark"] input, :root[data-theme="dark"] select, :root[data-theme="dark"] textarea { background: var(--surface); border-color: var(--line); color: var(--ink); }
