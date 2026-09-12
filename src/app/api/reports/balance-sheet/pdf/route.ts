@@ -1,7 +1,9 @@
 import { getReports } from "@/lib/report-data";
 import { createFinancialReportPdf } from "@/server/reports/pdf";
+import { getSessionUser } from "@/server/services/auth.service";
 
 export async function GET(request: Request) {
+  if (!await getSessionUser()) return Response.json({ message: "Sesi tidak valid" }, { status: 401 });
   const periodId = new URL(request.url).searchParams.get("period") || undefined;
   const { balanceTree, balance, periodLabel } = await getReports(periodId);
   const pdf = await createFinancialReportPdf({
@@ -14,5 +16,5 @@ export async function GET(request: Request) {
       { label: "SELISIH", value: balance.difference },
     ],
   });
-  return new Response(new Uint8Array(pdf), { headers: { "Content-Type": "application/pdf", "Content-Disposition": "attachment; filename=neraca.pdf" } });
+  return new Response(new Uint8Array(pdf), { headers: { "Content-Type": "application/pdf", "Content-Disposition": "attachment; filename=neraca.pdf", "Cache-Control": "private, no-store" } });
 }

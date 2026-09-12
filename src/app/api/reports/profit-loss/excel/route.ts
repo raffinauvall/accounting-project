@@ -1,8 +1,11 @@
 import ExcelJS from "exceljs";
 import { getReports } from "@/lib/report-data";
+import { getSessionUser } from "@/server/services/auth.service";
 
-export async function GET() {
-  const { profitLossTree, profitLoss } = await getReports();
+export async function GET(request: Request) {
+  if (!await getSessionUser()) return Response.json({ message: "Sesi tidak valid" }, { status: 401 });
+  const periodId = new URL(request.url).searchParams.get("period") || undefined;
+  const { profitLossTree, profitLoss } = await getReports(periodId);
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Laba Rugi");
   sheet.columns = [{ header: "Kode", key: "code", width: 16 }, { header: "Nama Akun", key: "name", width: 34 }, { header: "Saldo", key: "amount", width: 22 }];
@@ -11,5 +14,5 @@ export async function GET() {
   sheet.addRow({}); sheet.addRow({ name: "TOTAL PENDAPATAN", amount: Number(profitLoss.revenue) }); sheet.addRow({ name: "TOTAL BEBAN", amount: Number(profitLoss.expense) }); sheet.addRow({ name: "LABA / RUGI BERSIH", amount: Number(profitLoss.netProfitLoss) });
   sheet.getColumn("amount").numFmt = '"Rp" #,##0';
   const buffer = await workbook.xlsx.writeBuffer();
-  return new Response(buffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": "attachment; filename=laba-rugi.xlsx" } });
+  return new Response(buffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": "attachment; filename=laba-rugi.xlsx", "Cache-Control": "private, no-store" } });
 }

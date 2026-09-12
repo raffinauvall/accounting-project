@@ -78,6 +78,14 @@ npm run dev
 
 Buka `http://localhost:3000` dan login menggunakan credential seed.
 
+## Catatan keamanan production
+
+- Wajib isi `AUTH_SECRET` acak minimal 32 karakter; production tidak lagi memakai `DATABASE_URL` sebagai fallback secret.
+- Semua API laporan, template, dan impor jurnal membutuhkan session aktif.
+- `VIEWER` hanya dapat membaca; perubahan COA, saldo, periode, persediaan, dan pemetaan jurnal membutuhkan `ADMIN` atau `FINANCE`.
+- Impor jurnal menerima `.xlsx` maksimal 20 MB dan menolak request lintas situs.
+- Jalankan aplikasi melalui HTTPS dan jangan commit `.env` atau credential seed.
+
 ## Perintah yang tersedia
 
 ```bash

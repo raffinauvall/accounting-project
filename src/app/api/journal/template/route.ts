@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { getSessionUser } from "@/server/services/auth.service";
 
 const headers = ["No", "Kode Project", "Nama Project", "Tanggal", "No. Bukti", "Jenis Transaksi", "No. Penawaran", "No. Invoice", "Customer", "Keterangan", "Kategori", "Nomor Akun", "Nama Akun", "Deskripsi", "Kredit", "Debet"];
 
@@ -9,6 +10,7 @@ function styleHeader(row: ExcelJS.Row) {
 }
 
 export async function GET() {
+  if (!await getSessionUser()) return Response.json({ message: "Sesi tidak valid" }, { status: 401 });
   const workbook = new ExcelJS.Workbook();
   const journal = workbook.addWorksheet("JURNAL UMUM");
   journal.mergeCells("A1:P1");
@@ -34,5 +36,5 @@ export async function GET() {
   setup.views = [{ state: "frozen", ySplit: 5 }];
 
   const buffer = await workbook.xlsx.writeBuffer();
-  return new Response(buffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": "attachment; filename=template-jurnal-umum.xlsx" } });
+  return new Response(buffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": "attachment; filename=template-jurnal-umum.xlsx", "Cache-Control": "private, no-store" } });
 }

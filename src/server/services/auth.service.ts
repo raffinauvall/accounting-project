@@ -1,16 +1,20 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const cookieName = "pt-apst-session";
 const sessionLifetime = 8 * 60 * 60;
 
 function secret() {
-  // ponytail: fallback ke DATABASE_URL agar demo deploy tetap login; AUTH_SECRET terpisah untuk production.
-  const value = process.env.AUTH_SECRET ?? process.env.DATABASE_URL;
-  if (!value) throw new Error("AUTH_SECRET belum dikonfigurasi");
-  return value;
+  const value = process.env.AUTH_SECRET;
+  if (value) {
+    if (process.env.NODE_ENV === "production" && value.length < 32) throw new Error("AUTH_SECRET minimal 32 karakter di production");
+    return value;
+  }
+  if (process.env.NODE_ENV !== "production" && process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  throw new Error("AUTH_SECRET belum dikonfigurasi");
 }
 
 function sign(value: string) {
@@ -44,5 +48,17 @@ export async function getSessionUser() {
 export async function requireSession() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+export async function requireWriteAccess() {
+  const user = await requireSession();
+  if (user.role === Role.VIEWER) throw new Error("Pengguna hanya dapat melihat data");
+  return user;
+}
+
+export async function requireAdmin() {
+  const user = await requireSession();
+  if (user.role !== Role.ADMIN) throw new Error("Hanya admin yang dapat melakukan tindakan ini");
   return user;
 }
