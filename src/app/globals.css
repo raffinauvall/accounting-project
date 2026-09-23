@@ -9,15 +9,28 @@ button, input, select, textarea { font: inherit; }
 button, a, select, summary { transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, opacity .15s ease; }
 button:not(:disabled), a, select, summary { cursor: pointer; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-.panel { min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: .75rem; box-shadow: 0 1px 2px rgb(15 23 42 / .04); }
+.panel { min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: 1rem; box-shadow: 0 1px 2px rgb(15 23 42 / .04); }
 .label { display: block; color: var(--muted-foreground); font-size: 12px; font-weight: 700; letter-spacing: .04em; line-height: 1.25; text-transform: uppercase; }
 .label > input:not([type="hidden"]), .label > select, .label > textarea { display: block; margin-top: .5rem; }
 .money { font-variant-numeric: tabular-nums; }
 .chart-bar { min-width: 3px; transition: transform .18s ease, filter .18s ease; transform-origin: bottom; }
 .chart-bar:hover { filter: brightness(1.1); transform: scaleY(1.05); }
 .table-row-hover:hover { background-color: var(--muted); }
+button { min-height: 44px; }
+main { min-height: calc(100vh - 4rem); }
+.app-content > .space-y-7 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.75rem; }
+.app-content h2 { font-size: clamp(1.75rem, 2.4vw, 2.25rem); letter-spacing: -.03em; line-height: 1.1; }
+.app-content h2 + p { line-height: 1.6; }
+.panel > .label, .panel form .label { color: var(--foreground); font-size: 13px; letter-spacing: .01em; text-transform: none; }
+.panel table thead { background: var(--muted); }
+.panel table th { color: var(--muted-foreground); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.panel table td { vertical-align: middle; }
+summary { list-style: none; }
+summary::-webkit-details-marker { display: none; }
 input, select, textarea { border-color: var(--border); color: var(--foreground); }
+input:not([type="hidden"]):not([type="checkbox"]), select, textarea { border-radius: .65rem; }
 input::placeholder, textarea::placeholder { color: var(--muted-foreground); opacity: .8; }
 :root[data-theme="dark"] input, :root[data-theme="dark"] select, :root[data-theme="dark"] textarea { background: var(--card); border-color: var(--border); color: var(--foreground); }
 :root[data-theme="dark"] option { background: var(--card); color: var(--foreground); }
 @media print { aside, header, .no-print { display: none !important; } main { padding: 0 !important; } .panel { border-color: #ddd; } }
+@media (max-width: 640px) { .panel { border-radius: .875rem; } .panel table th, .panel table td { padding-left: 1rem; padding-right: 1rem; } }

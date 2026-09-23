@@ -36,7 +36,8 @@ export async function getReports(selectedPeriodId?: string) {
     const reportPeriods = periods.map((item) => ({ id: item.id, month: item.month, year: item.year, label: `${new Date(item.year, item.month - 1, 1).toLocaleString("id-ID", { month: "long" })} ${item.year}` }));
     return { balanceTree: balance.tree, balance: balance.totals, profitLossTree: profitLoss.tree, profitLoss: profitLoss.totals, periodId: period.id, periods: reportPeriods, periodLabel: `${new Date(period.year, period.month - 1, 1).toLocaleString("id-ID", { month: "long" })} ${period.year}`, isDemo: false };
   } catch (error) {
-    if (process.env.DATABASE_URL) throw error;
+    if (process.env.NODE_ENV === "production") throw error;
+    console.warn("Report database unavailable, using demo data in development.", error);
     return { ...getDemoReports(), periodId: demoPeriods[1].id, periods: demoPeriods, periodLabel: "September 2026", isDemo: true };
   }
 }
