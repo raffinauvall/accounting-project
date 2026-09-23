@@ -1,6 +1,7 @@
 import { buildTree, calculateBalanceSheet, calculateProfitLoss } from "@/server/reports/calculations";
 import { demoAccounts, demoPeriods } from "@/lib/demo-data";
 import { prisma } from "@/lib/prisma";
+import { getFinancialReports } from "@/server/services/report.service";
 
 export type ReportPeriod = { id: string; month: number; year: number; label: string };
 
@@ -31,8 +32,7 @@ export async function getReports(selectedPeriodId?: string) {
     const periods = await prisma.accountingPeriod.findMany({ orderBy: [{ year: "desc" }, { month: "desc" }] });
     const period = (selectedPeriodId ? periods.find((item) => item.id === selectedPeriodId) : undefined) ?? periods[0];
     if (!period) return emptyReports();
-    const { getBalanceSheet, getProfitLoss } = await import("@/server/services/report.service");
-    const [balance, profitLoss] = await Promise.all([getBalanceSheet(period.id), getProfitLoss(period.id)]);
+    const { balance, profitLoss } = await getFinancialReports(period);
     const reportPeriods = periods.map((item) => ({ id: item.id, month: item.month, year: item.year, label: `${new Date(item.year, item.month - 1, 1).toLocaleString("id-ID", { month: "long" })} ${item.year}` }));
     return { balanceTree: balance.tree, balance: balance.totals, profitLossTree: profitLoss.tree, profitLoss: profitLoss.totals, periodId: period.id, periods: reportPeriods, periodLabel: `${new Date(period.year, period.month - 1, 1).toLocaleString("id-ID", { month: "long" })} ${period.year}`, isDemo: false };
   } catch (error) {

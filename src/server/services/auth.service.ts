@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
@@ -40,10 +41,10 @@ export async function endSession() {
   (await cookies()).delete(cookieName);
 }
 
-export async function getSessionUser() {
+export const getSessionUser = cache(async () => {
   const userId = validSession((await cookies()).get(cookieName)?.value);
   return userId ? prisma.user.findFirst({ where: { id: userId, isActive: true }, select: { id: true, name: true, email: true, role: true } }) : null;
-}
+});
 
 export async function requireSession() {
   const user = await getSessionUser();
