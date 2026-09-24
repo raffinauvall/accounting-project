@@ -27,7 +27,7 @@ async function main() {
   const password = process.env.SEED_ADMIN_PASSWORD;
   if (!password) throw new Error("SEED_ADMIN_PASSWORD wajib diisi");
 
-  const organization = await prisma.organization.upsert({ where: { id: "default-org" }, update: {}, create: { id: "default-org", name: "Organisasi Utama", slug: "utama" } });
+  const organization = await prisma.organization.findFirst({ where: { isActive: true }, orderBy: { createdAt: "asc" } }) ?? await prisma.organization.create({ data: { name: "ARVI CREATION", slug: "arvi-creation" } });
 
   const ids = new Map<string, string>();
   for (const [code, name, parentCode, accountType, normalBalance, isPostingAccount] of accounts) {

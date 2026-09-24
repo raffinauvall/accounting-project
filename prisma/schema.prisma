@@ -87,7 +87,7 @@ model User {
 
 model CoaAccount {
   id               String        @id @default(cuid())
-  organizationId   String        @default("default-org")
+  organizationId   String
   code             String        @db.VarChar(50)
   name             String        @db.VarChar(150)
   parentId         String?
@@ -111,7 +111,7 @@ model CoaAccount {
 
 model AccountingPeriod {
   id        String       @id @default(cuid())
-  organizationId String   @default("default-org")
+  organizationId String
   month     Int          @db.SmallInt
   year      Int          @db.SmallInt
   startDate DateTime     @db.Date
@@ -130,7 +130,7 @@ model AccountingPeriod {
 
 model CoaEntry {
   id                 String           @id @default(cuid())
-  organizationId     String           @default("default-org")
+  organizationId     String
   coaAccountId       String
   accountingPeriodId String
   amount             Decimal          @db.Decimal(19, 2)
@@ -151,7 +151,7 @@ model CoaEntry {
 
 model JournalTransaction {
   id                 String           @id @default(cuid())
-  organizationId     String           @default("default-org")
+  organizationId     String
   transactionDate    DateTime         @db.Date
   accountingPeriodId String
   coaAccountId       String
@@ -183,7 +183,7 @@ model JournalTransaction {
 
 model InventoryItem {
   id                 String              @id @default(cuid())
-  organizationId     String              @default("default-org")
+  organizationId     String
   name               String              @db.VarChar(150)
   unit               String              @db.VarChar(30)
   openingStock       Decimal             @default(0) @db.Decimal(19, 3)
