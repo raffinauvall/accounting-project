@@ -35,7 +35,7 @@ export async function updateUserPassword(id: string, password: string) {
   return result;
 }
 
-export async function updateUserAccess(userId: string, organizationIds: string[]) {
+export async function updateUserAccess(userId: string, organizationIds: string[], canViewConsolidated: boolean) {
   await requireSuperadmin();
   const ids = [...new Set(organizationIds.filter(Boolean))];
   if (!ids.length) throw new Error("Pilih minimal satu organisasi");
@@ -44,6 +44,6 @@ export async function updateUserAccess(userId: string, organizationIds: string[]
   await prisma.$transaction([
     prisma.userOrganization.deleteMany({ where: { userId } }),
     prisma.userOrganization.createMany({ data: ids.map((organizationId) => ({ userId, organizationId })), skipDuplicates: true }),
-    prisma.user.update({ where: { id: userId }, data: { organizationId: ids[0] } }),
+    prisma.user.update({ where: { id: userId }, data: { organizationId: ids[0], canViewConsolidated } }),
   ]);
 }

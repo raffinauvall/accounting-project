@@ -17,6 +17,6 @@ export async function updateUserPasswordAction(formData: FormData) {
 }
 
 export async function updateUserAccessAction(formData: FormData) {
-  await updateUserAccess(String(formData.get("userId") ?? ""), formData.getAll("organizationId").map(String));
+  await updateUserAccess(String(formData.get("userId") ?? ""), formData.getAll("organizationId").map(String), formData.getAll("canViewConsolidated").includes("true"));
   revalidatePath("/users");
 }
