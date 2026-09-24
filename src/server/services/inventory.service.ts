@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requireOrganizationId } from "@/server/services/auth.service";
 
 const decimal = (value: string) => {
   try {
@@ -23,37 +24,43 @@ function quantityFromDescription(description: string | null) {
 }
 
 export async function createInventoryItem(input: { name: string; unit: string; openingStock: string }) {
+  const organizationId = await requireOrganizationId();
   const name = input.name.trim();
   const unit = input.unit.trim();
   if (!name || name.length > 150) throw new Error("Nama barang wajib diisi");
   if (!unit || unit.length > 30) throw new Error("Satuan barang wajib diisi");
-  return prisma.inventoryItem.create({ data: { name, unit, openingStock: decimal(input.openingStock) } });
+  return prisma.inventoryItem.create({ data: { organizationId, name, unit, openingStock: decimal(input.openingStock) } });
 }
 
 export async function updateInventoryItem(id: string, input: { name: string; unit: string; openingStock: string }) {
+  const organizationId = await requireOrganizationId();
   const name = input.name.trim();
   const unit = input.unit.trim();
   if (!id) throw new Error("Barang tidak valid");
   if (!name || name.length > 150) throw new Error("Nama barang wajib diisi");
   if (!unit || unit.length > 30) throw new Error("Satuan barang wajib diisi");
-  return prisma.inventoryItem.update({ where: { id }, data: { name, unit, openingStock: decimal(input.openingStock) } });
+  const result = await prisma.inventoryItem.updateMany({ where: { id, organizationId }, data: { name, unit, openingStock: decimal(input.openingStock) } });
+  if (result.count !== 1) throw new Error("Barang tidak ditemukan");
+  return result;
 }
 
 export async function deleteInventoryItem(id: string) {
-  const item = await prisma.inventoryItem.findUnique({ where: { id }, select: { _count: { select: { journalTransactions: true } } } });
+  const organizationId = await requireOrganizationId();
+  const item = await prisma.inventoryItem.findFirst({ where: { id, organizationId }, select: { _count: { select: { journalTransactions: true } } } });
   if (!item) throw new Error("Barang tidak ditemukan");
   if (item._count.journalTransactions > 0) throw new Error("Barang sudah memiliki riwayat jurnal dan tidak dapat dihapus");
   return prisma.inventoryItem.delete({ where: { id } });
 }
 
 export async function listInventoryItems() {
+  const organizationId = await requireOrganizationId();
   const items = await prisma.inventoryItem.findMany({
-    where: { isActive: true },
+    where: { organizationId, isActive: true },
     orderBy: { name: "asc" },
     include: { journalTransactions: { orderBy: { transactionDate: "asc" }, include: { accountingPeriod: { select: { month: true, year: true } }, coaAccount: { select: { code: true, name: true } } } } },
   });
   const automaticTransactions = await prisma.journalTransaction.findMany({
-    where: { inventoryItemId: null },
+    where: { organizationId, inventoryItemId: null },
     orderBy: { transactionDate: "asc" },
     include: { accountingPeriod: { select: { month: true, year: true } }, coaAccount: { select: { code: true, name: true } } },
   });

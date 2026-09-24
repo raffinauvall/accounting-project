@@ -2,12 +2,14 @@ import { AppShell } from "@/components/app-shell";
 import { EntryForm } from "@/components/entry-form";
 import { demoAccounts, demoPeriods } from "@/lib/demo-data";
 import { prisma } from "@/lib/prisma";
+import { requireOrganizationId } from "@/server/services/auth.service";
 
 export default async function EntriesPage() {
-  const live = await prisma.accountingPeriod.findMany({ orderBy: [{ year: "desc" }, { month: "desc" }] }).then(async (periods) => {
+  const organizationId = await requireOrganizationId();
+  const live = await prisma.accountingPeriod.findMany({ where: { organizationId }, orderBy: [{ year: "desc" }, { month: "desc" }] }).then(async (periods) => {
     const open = periods.find((period) => period.status === "OPEN");
-    const accounts = await prisma.coaAccount.findMany({ where: { isActive: true, isPostingAccount: true }, orderBy: { code: "asc" }, include: { entries: { where: { accountingPeriodId: open?.id }, select: { amount: true } } } });
-    const entries = open ? await prisma.coaEntry.findMany({ where: { accountingPeriodId: open.id }, orderBy: { updatedAt: "desc" }, include: { coaAccount: { select: { code: true, name: true } } } }) : [];
+    const accounts = await prisma.coaAccount.findMany({ where: { organizationId, isActive: true, isPostingAccount: true }, orderBy: { code: "asc" }, include: { entries: { where: { organizationId, accountingPeriodId: open?.id }, select: { amount: true } } } });
+    const entries = open ? await prisma.coaEntry.findMany({ where: { organizationId, accountingPeriodId: open.id }, orderBy: { updatedAt: "desc" }, include: { coaAccount: { select: { code: true, name: true } } } }) : [];
     return { periods, accounts, entries };
   }).catch(() => null);
   const periods = live?.periods.map((period) => ({ id: period.id, label: `${new Date(period.year, period.month - 1, 1).toLocaleString("id-ID", { month: "long" })} ${period.year}`, status: period.status })) ?? demoPeriods.map((period) => ({ id: period.id, label: period.label, status: period.status as "OPEN" | "CLOSED" }));

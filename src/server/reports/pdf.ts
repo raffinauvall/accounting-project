@@ -8,7 +8,7 @@ const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
 const MARGIN = 48;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-const LOGO = fs.readFileSync(path.join(process.cwd(), "src/logo.jpg"));
+const LOGO = fs.readFileSync(path.join(process.cwd(), "src/logo.jpeg"));
 
 type SummaryRow = { label: string; value: string; strong?: boolean };
 
@@ -22,7 +22,7 @@ function drawWatermark(doc: PDFKit.PDFDocument) {
 
 function drawHeader(doc: PDFKit.PDFDocument, title: string, periodLabel: string) {
   drawWatermark(doc);
-  doc.fillColor("#111111").font("Helvetica-Bold").fontSize(10).text("PT. APST", MARGIN, 42);
+  doc.fillColor("#111111").font("Helvetica-Bold").fontSize(10).text("ARVI CREATION", MARGIN, 42);
   doc.fillColor("#6b7785").font("Helvetica").fontSize(8).text("LAPORAN KEUANGAN", MARGIN, 57);
   doc.save().circle(PAGE_WIDTH - MARGIN - 24, 60, 24).clip().image(LOGO, PAGE_WIDTH - MARGIN - 48, 36, { width: 48, height: 48 }).restore();
   doc.fillColor("#111111").font("Helvetica-Bold").fontSize(21).text(title, MARGIN, 91);
@@ -83,7 +83,7 @@ export async function createFinancialReportPdf(input: { title: string; periodLab
   const pages = doc.bufferedPageRange();
   for (let index = 0; index < pages.count; index += 1) {
     doc.switchToPage(index);
-    doc.fillColor("#8a96a3").font("Helvetica").fontSize(7).text(`PT. APST · ${input.title}`, MARGIN, PAGE_HEIGHT - MARGIN - 12);
+    doc.fillColor("#8a96a3").font("Helvetica").fontSize(7).text(`ARVI CREATION · ${input.title}`, MARGIN, PAGE_HEIGHT - MARGIN - 12);
     doc.text(`Halaman ${index + 1} dari ${pages.count}`, PAGE_WIDTH - MARGIN - 120, PAGE_HEIGHT - MARGIN - 12, { width: 120, align: "right" });
   }
   doc.end();

@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { AccountType, NormalBalance, Prisma, StatementType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import { requireOrganizationId } from "@/server/services/auth.service";
 
 type SetupAccount = { name: string; category: string };
 type ParsedJournal = {
@@ -83,6 +84,7 @@ function readSetup(sheet: ExcelJS.Worksheet): Map<string, SetupAccount> {
 }
 
 export async function importJournalWorkbook(buffer: Buffer, userId: string, fileName: string) {
+  const organizationId = await requireOrganizationId();
   if (buffer.length > 20 * 1024 * 1024) throw new Error("Ukuran file maksimal 20 MB");
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
@@ -117,7 +119,7 @@ export async function importJournalWorkbook(buffer: Buffer, userId: string, file
 
   const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
   const codes = [...new Set(rows.map((row) => row.code))];
-  const existingAccounts = await prisma.coaAccount.findMany({ where: { code: { in: codes } } });
+  const existingAccounts = await prisma.coaAccount.findMany({ where: { organizationId, code: { in: codes } } });
   type ImportAccount = { id: string; code: string; isActive: boolean; isPostingAccount: boolean };
   const accountsByCode = new Map<string, ImportAccount>(existingAccounts.map((account) => [account.code, account]));
   const invalidAccounts = existingAccounts.filter((account) => !account.isActive || !account.isPostingAccount);
@@ -132,8 +134,8 @@ export async function importJournalWorkbook(buffer: Buffer, userId: string, file
       let period = periodsByKey.get(key);
       if (!period) {
         const [year, month] = key.split("-").map(Number);
-        const existing = await tx.accountingPeriod.findUnique({ where: { month_year: { month, year } }, select: { id: true, status: true } });
-        period = existing ?? await tx.accountingPeriod.create({ data: { month, year, startDate: new Date(Date.UTC(year, month - 1, 1)), endDate: new Date(Date.UTC(year, month, 0)) }, select: { id: true, status: true } });
+        const existing = await tx.accountingPeriod.findUnique({ where: { organizationId_month_year: { organizationId, month, year } }, select: { id: true, status: true } });
+        period = existing ?? await tx.accountingPeriod.create({ data: { organizationId, month, year, startDate: new Date(Date.UTC(year, month - 1, 1)), endDate: new Date(Date.UTC(year, month, 0)) }, select: { id: true, status: true } });
         if (!existing) createdPeriods += 1;
         periodsByKey.set(key, period);
       }
@@ -141,7 +143,7 @@ export async function importJournalWorkbook(buffer: Buffer, userId: string, file
       if (!accountsByCode.has(row.code)) {
         const setupAccount = setupAccounts.get(row.code);
         const classification = typeFromCategory(setupAccount?.category ?? "", row.code);
-        const account = await tx.coaAccount.create({ data: { code: row.code, name: setupAccount?.name || row.name, accountType: classification.accountType, statementType: classification.accountType === AccountType.REVENUE || classification.accountType === AccountType.EXPENSE ? StatementType.PROFIT_LOSS : StatementType.BALANCE_SHEET, normalBalance: classification.normalBalance, isPostingAccount: true }, select: { id: true, code: true, isActive: true, isPostingAccount: true } });
+        const account = await tx.coaAccount.create({ data: { organizationId, code: row.code, name: setupAccount?.name || row.name, accountType: classification.accountType, statementType: classification.accountType === AccountType.REVENUE || classification.accountType === AccountType.EXPENSE ? StatementType.PROFIT_LOSS : StatementType.BALANCE_SHEET, normalBalance: classification.normalBalance, isPostingAccount: true }, select: { id: true, code: true, isActive: true, isPostingAccount: true } });
         accountsByCode.set(row.code, account);
         createdAccounts += 1;
       }
@@ -150,7 +152,7 @@ export async function importJournalWorkbook(buffer: Buffer, userId: string, file
       const period = periodsByKey.get(`${row.date.getUTCFullYear()}-${row.date.getUTCMonth() + 1}`);
       const account = accountsByCode.get(row.code);
       if (!period || !account) throw new Error(`Mapping transaksi baris ${row.row} gagal`);
-      return { transactionDate: row.date, accountingPeriodId: period.id, coaAccountId: account.id, offerNumber: row.offerNumber, invoiceNumber: row.invoiceNumber, description: row.description, credit: row.credit, debit: row.debit, importKey: `${fileHash}-${row.row}`, sourceRow: row.row, createdById: userId };
+      return { organizationId, transactionDate: row.date, accountingPeriodId: period.id, coaAccountId: account.id, offerNumber: row.offerNumber, invoiceNumber: row.invoiceNumber, description: row.description, credit: row.credit, debit: row.debit, importKey: `${fileHash}-${row.row}`, sourceRow: row.row, createdById: userId };
     });
     const inserted = await tx.journalTransaction.createMany({ data, skipDuplicates: true });
     return { inserted: inserted.count, skipped: data.length - inserted.count, rows: data.length, createdAccounts, createdPeriods };
@@ -160,22 +162,29 @@ export async function importJournalWorkbook(buffer: Buffer, userId: string, file
   return result;
 }
 
-export function clearJournalData() {
-  return prisma.journalTransaction.deleteMany();
+export async function clearJournalData() {
+  const organizationId = await requireOrganizationId();
+  return prisma.journalTransaction.deleteMany({ where: { organizationId } });
 }
 
-export function listJournalTransactions() {
-  return prisma.journalTransaction.findMany({ orderBy: [{ transactionDate: "desc" }, { sourceRow: "desc" }], take: 100, include: { coaAccount: { select: { code: true, name: true } }, accountingPeriod: { select: { month: true, year: true } }, inventoryItem: { select: { id: true, name: true, unit: true } } } });
+export async function listJournalTransactions() {
+  const organizationId = await requireOrganizationId();
+  return prisma.journalTransaction.findMany({ where: { organizationId }, orderBy: [{ transactionDate: "desc" }, { sourceRow: "desc" }], take: 100, include: { coaAccount: { select: { code: true, name: true } }, accountingPeriod: { select: { month: true, year: true } }, inventoryItem: { select: { id: true, name: true, unit: true } } } });
 }
 
 export async function mapJournalTransaction(id: string, inventoryItemId: string | null, quantity: string) {
+  const organizationId = await requireOrganizationId();
   if (!id) throw new Error("Transaksi jurnal tidak valid");
   if (inventoryItemId) {
-    const item = await prisma.inventoryItem.findFirst({ where: { id: inventoryItemId, isActive: true }, select: { id: true } });
+    const item = await prisma.inventoryItem.findFirst({ where: { id: inventoryItemId, organizationId, isActive: true }, select: { id: true } });
     if (!item) throw new Error("Barang tidak ditemukan");
     const amount = new Prisma.Decimal(quantity.trim().replace(",", ".") || "0");
     if (amount.isNegative() || amount.isZero()) throw new Error("Kuantitas harus lebih besar dari nol");
-    return prisma.journalTransaction.update({ where: { id }, data: { inventoryItemId: item.id, inventoryQuantity: amount } });
+    const result = await prisma.journalTransaction.updateMany({ where: { id, organizationId }, data: { inventoryItemId: item.id, inventoryQuantity: amount } });
+    if (result.count !== 1) throw new Error("Transaksi jurnal tidak ditemukan");
+    return result;
   }
-  return prisma.journalTransaction.update({ where: { id }, data: { inventoryItemId: null, inventoryQuantity: 0 } });
+  const result = await prisma.journalTransaction.updateMany({ where: { id, organizationId }, data: { inventoryItemId: null, inventoryQuantity: 0 } });
+  if (result.count !== 1) throw new Error("Transaksi jurnal tidak ditemukan");
+  return result;
 }

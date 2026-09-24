@@ -27,33 +27,35 @@ async function main() {
   const password = process.env.SEED_ADMIN_PASSWORD;
   if (!password) throw new Error("SEED_ADMIN_PASSWORD wajib diisi");
 
+  const organization = await prisma.organization.upsert({ where: { id: "default-org" }, update: {}, create: { id: "default-org", name: "Organisasi Utama", slug: "utama" } });
+
   const ids = new Map<string, string>();
   for (const [code, name, parentCode, accountType, normalBalance, isPostingAccount] of accounts) {
     const account = await prisma.coaAccount.upsert({
-      where: { code },
+      where: { organizationId_code: { organizationId: organization.id, code } },
       update: { name, accountType, statementType: accountType === AccountType.REVENUE || accountType === AccountType.EXPENSE ? StatementType.PROFIT_LOSS : StatementType.BALANCE_SHEET, normalBalance, isPostingAccount, isActive: true },
-      create: { code, name, parentId: parentCode ? ids.get(parentCode) : null, accountType, statementType: accountType === AccountType.REVENUE || accountType === AccountType.EXPENSE ? StatementType.PROFIT_LOSS : StatementType.BALANCE_SHEET, normalBalance, isPostingAccount },
+      create: { organizationId: organization.id, code, name, parentId: parentCode ? ids.get(parentCode) : null, accountType, statementType: accountType === AccountType.REVENUE || accountType === AccountType.EXPENSE ? StatementType.PROFIT_LOSS : StatementType.BALANCE_SHEET, normalBalance, isPostingAccount },
     });
     ids.set(code, account.id);
   }
 
   const admin = await prisma.user.upsert({
     where: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@example.com" },
-    update: { name: "Administrator", passwordHash: await bcrypt.hash(password, 10), role: Role.ADMIN, isActive: true },
-    create: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@example.com", name: "Administrator", passwordHash: await bcrypt.hash(password, 10), role: Role.ADMIN },
+    update: { organizationId: organization.id, name: "Administrator", passwordHash: await bcrypt.hash(password, 10), role: Role.SUPERADMIN, isActive: true },
+    create: { organizationId: organization.id, email: process.env.SEED_ADMIN_EMAIL ?? "admin@example.com", name: "Administrator", passwordHash: await bcrypt.hash(password, 10), role: Role.SUPERADMIN },
   });
 
   const now = new Date();
   const period = await prisma.accountingPeriod.upsert({
-    where: { month_year: { month: now.getMonth() + 1, year: now.getFullYear() } },
+    where: { organizationId_month_year: { organizationId: organization.id, month: now.getMonth() + 1, year: now.getFullYear() } },
     update: {},
-    create: { month: now.getMonth() + 1, year: now.getFullYear(), startDate: new Date(now.getFullYear(), now.getMonth(), 1), endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0) },
+    create: { organizationId: organization.id, month: now.getMonth() + 1, year: now.getFullYear(), startDate: new Date(now.getFullYear(), now.getMonth(), 1), endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0) },
   });
 
   const sampleEntries = [["1.1.1", "50000000"], ["1.1.2", "75000000"], ["1.1.3", "25000000"], ["2.1.1", "50000000"], ["3.1", "100000000"], ["4.1.1", "100000000"], ["5.1.1", "40000000"], ["5.1.2", "20000000"]];
-  if (await prisma.coaEntry.count() === 0) for (const [code, amount] of sampleEntries) {
+  if (await prisma.coaEntry.count({ where: { organizationId: organization.id } }) === 0) for (const [code, amount] of sampleEntries) {
     const accountId = ids.get(code);
-    if (accountId) await prisma.coaEntry.create({ data: { coaAccountId: accountId, accountingPeriodId: period.id, amount, createdById: admin.id, description: "Saldo contoh demo" } });
+    if (accountId) await prisma.coaEntry.create({ data: { organizationId: organization.id, coaAccountId: accountId, accountingPeriodId: period.id, amount, createdById: admin.id, description: "Saldo contoh demo" } });
   }
 }
 

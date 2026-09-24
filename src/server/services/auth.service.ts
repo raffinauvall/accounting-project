@@ -6,6 +6,7 @@ import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const cookieName = "pt-apst-session";
+const organizationCookieName = "pt-apst-organization";
 const sessionLifetime = 8 * 60 * 60;
 
 function secret() {
@@ -43,7 +44,7 @@ export async function endSession() {
 
 export const getSessionUser = cache(async () => {
   const userId = validSession((await cookies()).get(cookieName)?.value);
-  return userId ? prisma.user.findFirst({ where: { id: userId, isActive: true }, select: { id: true, name: true, email: true, role: true } }) : null;
+  return userId ? prisma.user.findFirst({ where: { id: userId, isActive: true }, select: { id: true, name: true, email: true, role: true, organizationId: true, organization: { select: { id: true, name: true, slug: true } } } }) : null;
 });
 
 export async function requireSession() {
@@ -60,6 +61,35 @@ export async function requireWriteAccess() {
 
 export async function requireAdmin() {
   const user = await requireSession();
-  if (user.role !== Role.ADMIN) throw new Error("Hanya admin yang dapat melakukan tindakan ini");
+  if (user.role !== Role.ADMIN && user.role !== Role.SUPERADMIN) throw new Error("Hanya admin yang dapat melakukan tindakan ini");
   return user;
+}
+
+export const getOrganizationContext = cache(async () => {
+  const user = await requireSession();
+  const organizations = user.role === Role.SUPERADMIN
+    ? await prisma.organization.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, slug: true } })
+    : user.organization ? [user.organization] : [];
+  const selectedId = (await cookies()).get(organizationCookieName)?.value;
+  const organization = organizations.find((item) => item.id === selectedId) ?? organizations[0] ?? null;
+  return { user, organization, organizations };
+});
+
+export async function requireOrganizationId() {
+  const context = await getOrganizationContext();
+  if (!context.organization) throw new Error("Belum ada organisasi aktif");
+  return context.organization.id;
+}
+
+export async function requireSuperadmin() {
+  const user = await requireSession();
+  if (user.role !== Role.SUPERADMIN) throw new Error("Hanya superadmin yang dapat melakukan tindakan ini");
+  return user;
+}
+
+export async function setActiveOrganization(id: string) {
+  const context = await getOrganizationContext();
+  if (context.user.role !== Role.SUPERADMIN) throw new Error("Hanya superadmin yang dapat mengganti organisasi");
+  if (!context.organizations.some((organization) => organization.id === id)) throw new Error("Organisasi tidak ditemukan");
+  (await cookies()).set(organizationCookieName, id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: sessionLifetime, path: "/" });
 }

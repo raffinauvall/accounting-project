@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { ReportAccount } from "@/server/reports/calculations";
 import { buildTree, calculateBalanceSheet, calculateProfitLoss } from "@/server/reports/calculations";
 
-type ReportPeriod = Pick<AccountingPeriod, "id" | "year" | "endDate">;
+type ReportPeriod = Pick<AccountingPeriod, "id" | "organizationId" | "year" | "endDate">;
 type AccountRow = Prisma.CoaAccountGetPayload<{ select: { id: true; code: true; name: true; parentId: true; accountType: true; statementType: true; normalBalance: true } }>;
 type EntryRow = Prisma.CoaEntryGetPayload<{ select: { coaAccountId: true; amount: true } }>;
 type JournalRow = Prisma.JournalTransactionGetPayload<{ select: { coaAccountId: true; accountingPeriodId: true; transactionDate: true; debit: true; credit: true } }>;
@@ -12,13 +12,13 @@ async function loadReportData(period: ReportPeriod) {
   const yearStart = new Date(Date.UTC(period.year, 0, 1));
   return Promise.all([
     prisma.coaAccount.findMany({
-      where: { isActive: true },
+      where: { organizationId: period.organizationId, isActive: true },
       orderBy: { code: "asc" },
       select: { id: true, code: true, name: true, parentId: true, accountType: true, statementType: true, normalBalance: true },
     }),
-    prisma.coaEntry.findMany({ where: { accountingPeriodId: period.id }, select: { coaAccountId: true, amount: true } }),
+    prisma.coaEntry.findMany({ where: { organizationId: period.organizationId, accountingPeriodId: period.id }, select: { coaAccountId: true, amount: true } }),
     prisma.journalTransaction.findMany({
-      where: { OR: [{ transactionDate: { gte: yearStart, lte: period.endDate } }, { accountingPeriodId: period.id }] },
+      where: { organizationId: period.organizationId, OR: [{ transactionDate: { gte: yearStart, lte: period.endDate } }, { accountingPeriodId: period.id }] },
       select: { coaAccountId: true, accountingPeriodId: true, transactionDate: true, debit: true, credit: true },
     }),
   ]);
@@ -54,10 +54,15 @@ function accountsFor(period: ReportPeriod, statementType: ReportAccount["stateme
   }));
 }
 
-export async function getFinancialReports(period: ReportPeriod) {
+export async function getFinancialReportAccounts(period: ReportPeriod) {
   const [accounts, entries, journalTransactions] = await loadReportData(period);
   const balanceAccounts = accountsFor(period, "BALANCE_SHEET", accounts, entries, journalTransactions);
   const profitLossAccounts = accountsFor(period, "PROFIT_LOSS", accounts, entries, journalTransactions);
+  return { balanceAccounts, profitLossAccounts };
+}
+
+export async function getFinancialReports(period: ReportPeriod) {
+  const { balanceAccounts, profitLossAccounts } = await getFinancialReportAccounts(period);
   return {
     balance: { tree: buildTree(balanceAccounts), totals: calculateBalanceSheet(balanceAccounts) },
     profitLoss: { tree: buildTree(profitLossAccounts), totals: calculateProfitLoss(profitLossAccounts) },

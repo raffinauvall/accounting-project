@@ -8,6 +8,7 @@ datasource db {
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   FINANCE
   VIEWER
@@ -47,23 +48,44 @@ enum AuditAction {
   IMPORT_JOURNAL
 }
 
+model Organization {
+  id                  String                @id @default(cuid())
+  name                String                @db.VarChar(150)
+  slug                String                @unique @db.VarChar(80)
+  isActive            Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  users               User[]
+  coaAccounts         CoaAccount[]
+  accountingPeriods   AccountingPeriod[]
+  entries             CoaEntry[]
+  journalTransactions JournalTransaction[]
+  inventoryItems      InventoryItem[]
+  auditLogs           AuditLog[]
+}
+
 model User {
   id           String     @id @default(cuid())
   email        String     @unique @db.VarChar(255)
   name         String     @db.VarChar(150)
   passwordHash String
   role         Role       @default(VIEWER)
+  organizationId String?
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   entries      CoaEntry[] @relation("EntryCreatedBy")
   journalTransactions JournalTransaction[] @relation("JournalCreatedBy")
   auditLogs    AuditLog[] @relation("AuditActor")
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId])
 }
 
 model CoaAccount {
   id               String        @id @default(cuid())
-  code             String        @unique @db.VarChar(50)
+  organizationId   String        @default("default-org")
+  code             String        @db.VarChar(50)
   name             String        @db.VarChar(150)
   parentId         String?
   accountType      AccountType
@@ -77,12 +99,16 @@ model CoaAccount {
   children         CoaAccount[]  @relation("CoaHierarchy")
   entries          CoaEntry[]
   journalTransactions JournalTransaction[]
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   @@index([parentId])
+  @@index([organizationId])
+  @@unique([organizationId, code])
 }
 
 model AccountingPeriod {
   id        String       @id @default(cuid())
+  organizationId String   @default("default-org")
   month     Int          @db.SmallInt
   year      Int          @db.SmallInt
   startDate DateTime     @db.Date
@@ -92,13 +118,16 @@ model AccountingPeriod {
   updatedAt DateTime     @updatedAt
   entries   CoaEntry[]
   journalTransactions JournalTransaction[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
-  @@unique([month, year])
+  @@unique([organizationId, month, year])
+  @@index([organizationId])
   @@index([year, month])
 }
 
 model CoaEntry {
   id                 String           @id @default(cuid())
+  organizationId     String           @default("default-org")
   coaAccountId       String
   accountingPeriodId String
   amount             Decimal          @db.Decimal(19, 2)
@@ -109,14 +138,17 @@ model CoaEntry {
   coaAccount         CoaAccount       @relation(fields: [coaAccountId], references: [id], onDelete: Restrict)
   accountingPeriod   AccountingPeriod @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
   createdBy          User             @relation("EntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
-  @@unique([coaAccountId, accountingPeriodId])
+  @@unique([organizationId, coaAccountId, accountingPeriodId])
+  @@index([organizationId])
   @@index([accountingPeriodId])
   @@index([coaAccountId])
 }
 
 model JournalTransaction {
   id                 String           @id @default(cuid())
+  organizationId     String           @default("default-org")
   transactionDate    DateTime         @db.Date
   accountingPeriodId String
   coaAccountId       String
@@ -127,7 +159,7 @@ model JournalTransaction {
   description        String?          @db.VarChar(500)
   credit             Decimal          @default(0) @db.Decimal(19, 2)
   debit              Decimal          @default(0) @db.Decimal(19, 2)
-  importKey          String           @unique @db.VarChar(100)
+  importKey          String           @db.VarChar(100)
   sourceRow          Int
   createdById        String
   createdAt          DateTime         @default(now())
@@ -136,7 +168,10 @@ model JournalTransaction {
   coaAccount         CoaAccount       @relation(fields: [coaAccountId], references: [id], onDelete: Restrict)
   createdBy          User             @relation("JournalCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   inventoryItem      InventoryItem?   @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
+  @@unique([organizationId, importKey])
+  @@index([organizationId])
   @@index([accountingPeriodId])
   @@index([coaAccountId])
   @@index([transactionDate])
@@ -145,17 +180,23 @@ model JournalTransaction {
 
 model InventoryItem {
   id                 String              @id @default(cuid())
-  name               String              @unique @db.VarChar(150)
+  organizationId     String              @default("default-org")
+  name               String              @db.VarChar(150)
   unit               String              @db.VarChar(30)
   openingStock       Decimal             @default(0) @db.Decimal(19, 3)
   isActive           Boolean             @default(true)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   journalTransactions JournalTransaction[]
+  organization        Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 model AuditLog {
   id        String      @id @default(cuid())
+  organizationId String?
   userId    String
   action    AuditAction
   entity    String      @db.VarChar(80)
@@ -163,7 +204,9 @@ model AuditLog {
   metadata  Json?       @db.JsonB
   createdAt DateTime    @default(now())
   user      User        @relation("AuditActor", fields: [userId], references: [id], onDelete: Restrict)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
+  @@index([organizationId])
   @@index([userId])
   @@index([entity, entityId])
   @@index([createdAt])

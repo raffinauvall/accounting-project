@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
-import { navItems } from "@/components/sidebar";
+import { visibleNavItems } from "@/components/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { logoutAction } from "@/app/login/actions";
 import { ConfirmForm } from "@/components/confirm-dialog";
 import { useEffect, useState } from "react";
+import { switchOrganizationAction } from "@/app/(app)/organizations/actions";
 
-const roleLabels: Record<string, string> = { ADMIN: "Admin", FINANCE: "Keuangan", VIEWER: "Penampil" };
+const roleLabels: Record<string, string> = { ADMIN: "Admin", SUPERADMIN: "Superadmin", FINANCE: "Keuangan", VIEWER: "Penampil" };
 
-export function Header({ title, user }: { title: string; user: { name: string; email: string; role: string } }) {
+type Organization = { id: string; name: string; slug: string };
+
+export function Header({ title, user, organization, organizations }: { title: string; user: { name: string; email: string; role: string }; organization: Organization | null; organizations: Organization[] }) {
   const [open, setOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const pathname = usePathname();
@@ -36,6 +39,7 @@ export function Header({ title, user }: { title: string; user: { name: string; e
         </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
+        {user.role === "SUPERADMIN" && organizations.length > 0 ? <form action={switchOrganizationAction} className="hidden md:block"><label htmlFor="active-organization" className="sr-only">Organisasi aktif</label><select id="active-organization" name="organizationId" defaultValue={organization?.id ?? ""} onChange={(event) => event.currentTarget.form?.requestSubmit()} className="h-10 max-w-48 rounded-md border border-[var(--border)] bg-[var(--card)] px-3 text-sm font-medium"><option value="" disabled>Organisasi</option>{organizations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></form> : organization ? <div className="hidden max-w-40 truncate rounded-md bg-[var(--muted)] px-3 py-2 text-xs font-semibold md:block" title={organization.name}>{organization.name}</div> : null}
         <ThemeToggle />
         <div className="hidden h-8 w-px bg-[var(--border)] sm:block" />
         <div className="relative">
@@ -71,7 +75,7 @@ export function Header({ title, user }: { title: string; user: { name: string; e
           <button type="button" className="fixed inset-0 z-40 bg-black/20 lg:hidden" aria-label="Tutup menu" onClick={() => setOpen(false)} />
           <div id="mobile-navigation" className="absolute left-0 right-0 top-full z-50 border-b border-[var(--border)] bg-[var(--card)] p-3 shadow-lg lg:hidden">
             <nav className="space-y-1">
-              {navItems.map(([label, href, Icon]) => (
+              {visibleNavItems(user.role).map(([label, href, Icon]) => (
                 <Link key={href} href={href} onClick={() => setOpen(false)} className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium ${pathname === href || pathname.startsWith(`${href}/`) ? "bg-[var(--muted)] text-[var(--foreground)]" : "text-[var(--muted-foreground)]"}`}>
                   <Icon size={17} />
                   {label}
