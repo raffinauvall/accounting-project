@@ -41,9 +41,10 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@example.com" },
-    update: { organizationId: organization.id, name: "Administrator", passwordHash: await bcrypt.hash(password, 10), role: Role.SUPERADMIN, isActive: true },
-    create: { organizationId: organization.id, email: process.env.SEED_ADMIN_EMAIL ?? "admin@example.com", name: "Administrator", passwordHash: await bcrypt.hash(password, 10), role: Role.SUPERADMIN },
+    update: { organizationId: organization.id, canViewConsolidated: true, name: "Administrator", passwordHash: await bcrypt.hash(password, 10), role: Role.SUPERADMIN, isActive: true },
+    create: { organizationId: organization.id, canViewConsolidated: true, email: process.env.SEED_ADMIN_EMAIL ?? "admin@example.com", name: "Administrator", passwordHash: await bcrypt.hash(password, 10), role: Role.SUPERADMIN },
   });
+  await prisma.userOrganization.upsert({ where: { userId_organizationId: { userId: admin.id, organizationId: organization.id } }, update: {}, create: { userId: admin.id, organizationId: organization.id } });
 
   const now = new Date();
   const period = await prisma.accountingPeriod.upsert({

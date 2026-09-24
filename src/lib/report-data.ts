@@ -3,7 +3,7 @@ import { buildTree, calculateBalanceSheet, calculateProfitLoss, type ReportAccou
 import { demoAccounts, demoPeriods } from "@/lib/demo-data";
 import { prisma } from "@/lib/prisma";
 import { getFinancialReportAccounts, getFinancialReports } from "@/server/services/report.service";
-import { requireOrganizationId, requireSuperadmin } from "@/server/services/auth.service";
+import { requireConsolidatedAccess, requireOrganizationId } from "@/server/services/auth.service";
 
 export type ReportPeriod = { id: string; month: number; year: number; label: string };
 
@@ -48,8 +48,8 @@ export async function getReports(selectedPeriodId?: string) {
 const reportLabel = (month: number, year: number) => new Date(year, month - 1, 1).toLocaleString("id-ID", { month: "long" }) + ` ${year}`;
 
 export async function getConsolidatedReports(selectedPeriodId?: string) {
-  await requireSuperadmin();
-  const organizations = await prisma.organization.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, slug: true } });
+  const context = await requireConsolidatedAccess();
+  const organizations = context.user.role === "SUPERADMIN" ? await prisma.organization.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, slug: true } }) : context.organizations;
   const periods = await prisma.accountingPeriod.findMany({ where: { organizationId: { in: organizations.map((organization) => organization.id) } }, orderBy: [{ year: "desc" }, { month: "desc" }] });
   const periodKeys = [...new Set(periods.map((period) => `${period.year}-${String(period.month).padStart(2, "0")}`))];
   const periodKey = selectedPeriodId && periodKeys.includes(selectedPeriodId) ? selectedPeriodId : periodKeys[0];
